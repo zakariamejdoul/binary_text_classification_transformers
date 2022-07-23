@@ -1,3 +1,4 @@
 run:
         docker build -t posologytest/docker-train-image -f .\trainer.Dockerfile .
-        docker run --rm --name train-model posologytest/docker-train-image -p 4002:4002
+        docker run -it --name train-model posologytest/docker-train-image
+        docker commit train-model posologytest/docker-train-image:latest

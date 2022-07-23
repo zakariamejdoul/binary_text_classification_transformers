@@ -16,4 +16,6 @@ pip install -r requirements.txt
 
 ## Behaviour
 
+Text classification, including supervised text clas-sification, semi-supervised text classification, and unsu-pervised text classification, is a major research field inNatural language processing (NLP).
+n this study, wefocus on the supervised learning area; that is, we trainthe model on labeled data and test it using unlabeleddata. Text classification has three main fields: sentimentanalysis[2], question type classification[3]and topic typelabeling[4]. Text classification can be applied in many realapplications such as spam classification, news grouping,intelligent recommendation.
 
