@@ -228,77 +228,8 @@ class PosologyClassificationModel():
 
         return word_index, x_train_seq, x_test_seq, token
 
-    # ------------- Create classifier model using transformer layer
 
-
-class MultiHeadSelfAttention(layers.Layer):
-    def __init__(self, embed_dim, num_heads=8, **kwargs):
-        super(MultiHeadSelfAttention, self).__init__(**kwargs)
-        self.embed_dim = embed_dim
-        self.num_heads = num_heads
-        if embed_dim % num_heads != 0:
-            raise ValueError(
-                f"embedding dimension = {embed_dim} should be divisible by number of heads = {num_heads}"
-            )
-        self.projection_dim = embed_dim // num_heads
-        self.query_dense = layers.Dense(embed_dim)
-        self.key_dense = layers.Dense(embed_dim)
-        self.value_dense = layers.Dense(embed_dim)
-        self.combine_heads = layers.Dense(embed_dim)
-
-    def get_config(self):
-        config = super().get_config()
-        config.update({
-            "embed_dim": self.embed_dim,
-            "num_heads": self.num_heads,
-            "projection_dim": self.projection_dim,
-            "query_dense": self.query_dense,
-            "key_dense": self.key_dense,
-            "value_dense": self.value_dense,
-            "combine_heads": self.combine_heads
-        })
-        return config
-
-    @staticmethod
-    def attention(query, key, value):
-        score = tf.matmul(query, key, transpose_b=True)
-        dim_key = tf.cast(tf.shape(key)[-1], tf.float32)
-        scaled_score = score / tf.math.sqrt(dim_key)
-        weights = tf.nn.softmax(scaled_score, axis=-1)
-        output = tf.matmul(weights, value)
-        return output, weights
-
-    def separate_heads(self, x, batch_size):
-        x = tf.reshape(x, (batch_size, -1, self.num_heads, self.projection_dim))
-        return tf.transpose(x, perm=[0, 2, 1, 3])
-
-    def call(self, inputs):
-        # x.shape = [batch_size, seq_len, embedding_dim]
-        batch_size = tf.shape(inputs)[0]
-        query = self.query_dense(inputs)  # (batch_size, seq_len, embed_dim)
-        key = self.key_dense(inputs)  # (batch_size, seq_len, embed_dim)
-        value = self.value_dense(inputs)  # (batch_size, seq_len, embed_dim)
-        query = self.separate_heads(
-            query, batch_size
-        )  # (batch_size, num_heads, seq_len, projection_dim)
-        key = self.separate_heads(
-            key, batch_size
-        )  # (batch_size, num_heads, seq_len, projection_dim)
-        value = self.separate_heads(
-            value, batch_size
-        )  # (batch_size, num_heads, seq_len, projection_dim)
-        attention, weights = self.attention(query, key, value)
-        attention = tf.transpose(
-            attention, perm=[0, 2, 1, 3]
-        )  # (batch_size, seq_len, num_heads, projection_dim)
-        concat_attention = tf.reshape(
-            attention, (batch_size, -1, self.embed_dim)
-        )  # (batch_size, seq_len, embed_dim)
-        output = self.combine_heads(
-            concat_attention
-        )  # (batch_size, seq_len, embed_dim)
-        return output
-
+# ------------- Create classifier model using transformer layer
 
 def transformers_classifier(word_index, label=None):
     '''
@@ -370,12 +301,12 @@ def build_model():
 def train():
     model_transformers, x_train_seq, x_test_seq, train_y, test_y, token, model = build_model()
     # Early Stopping & Model saving
-    es = tf.keras.callbacks.EarlyStopping(monitor='val_loss', mode='auto', patience=3)
-    callbacks = tf.keras.callbacks.ModelCheckpoint("models/model.h5", save_best_only=True)
+    # es = tf.keras.callbacks.EarlyStopping(monitor='val_loss', mode='auto', patience=3)
+    # callbacks = tf.keras.callbacks.ModelCheckpoint("models/model.h5", save_best_only=True)
 
     history = model_transformers.fit(
         x_train_seq, train_y,
-        epochs=50,
+        epochs=50,  # callbacks=[es],
         validation_split=0.2, batch_size=32)
     return history, model_transformers, x_test_seq, test_y, token, model
 
@@ -386,8 +317,8 @@ def evaluate(model_transformers, x_test_seq, test_y):
     print(
         f"\nThe precision of the model is {round(100 * precision_score(test_y, (model_transformers.predict(x_test_seq) > 0.5).astype(int), labels=[0, 1]), 2)}%")
 
-    # ------------- Displaying Metrics
 
+# ------------- Displaying Metrics
 
 def display_metrics(model_transformers, history, x_test_seq, test_y):
     metric = Metrics()
